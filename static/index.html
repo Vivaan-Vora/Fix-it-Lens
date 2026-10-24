@@ -3,89 +3,100 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b0d12">
+<meta name="theme-color" content="#11141a">
 <title>Fix-it Lens</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23121517'/%3E%3Cpath d='M40 15a13 13 0 0 0-16 16L10 45l9 9 14-14a13 13 0 0 0 16-16l-8 8-9-9z' fill='none' stroke='%23f06a35' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0b0d12; --bg2:#11141b; --card:#151922; --card2:#1b202b; --line:#262c39;
-    --fg:#f2f4f8; --muted:#8d96a8; --accent:#ffb020; --accent2:#ff7a1a;
-    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --radius:18px;
+    --bg:#0b0d12; --bg2:#11151b; --card:#171b22; --card2:#202630; --line:#333b49;
+    --fg:#f5f2ea; --muted:#a7adb8; --accent:#ff6b35; --accent-hot:#ff9f43; --accent2:#28c7d9;
+    --violet:#8b7cf6; --ok:#5bd6a2; --warn:#f4bd50; --bad:#f3756b; --radius:8px;
+    --heat:linear-gradient(112deg,var(--accent) 0%,var(--accent-hot) 46%,#ffd166 100%);
+    --spectrum:linear-gradient(112deg,var(--accent) 0%,var(--violet) 52%,var(--accent2) 100%);
+    --surface:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,0) 44%),var(--card);
+    --display:"Barlow Condensed", sans-serif; --body:"IBM Plex Sans", sans-serif; --mono:"IBM Plex Mono", monospace;
   }
   * { box-sizing:border-box; }
   html { -webkit-text-size-adjust:100%; }
   body {
-    margin:0; min-height:100vh; color:var(--fg); font:16px/1.5 Inter, system-ui, sans-serif;
-    background:
-      radial-gradient(900px 500px at 85% -10%, rgba(255,122,26,.18), transparent 60%),
-      radial-gradient(700px 400px at -10% 10%, rgba(255,176,32,.10), transparent 60%),
-      var(--bg);
+    margin:0; min-height:100vh; color:var(--fg); font:16px/1.55 var(--body);
+    background-color:var(--bg);
+    background-image:radial-gradient(circle at 12% 4%,rgba(255,107,53,.18),transparent 28rem),radial-gradient(circle at 88% 18%,rgba(40,199,217,.13),transparent 31rem),radial-gradient(circle at 50% 82%,rgba(139,124,246,.09),transparent 34rem),linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+    background-size:auto,auto,auto,32px 32px,32px 32px;
+    background-attachment:fixed;
   }
-  main { max-width:760px; margin:0 auto; padding:20px 16px 80px; }
-  h1,h2,h3,.display { font-family:"Space Grotesk", Inter, sans-serif; letter-spacing:-.02em; }
-  h3 { margin:0 0 10px; font-size:17px; }
+  main { max-width:780px; margin:0 auto; padding:24px 16px 80px; }
+  h1,h2,h3,.display { font-family:var(--display); letter-spacing:.005em; }
+  h3 { margin:0 0 10px; font-size:20px; text-transform:uppercase; letter-spacing:.035em; }
   .muted { color:var(--muted); }
+  .section-mark { display:inline-grid; place-items:center; min-width:27px; height:23px; margin-right:8px; padding:0 5px; border:1px solid rgba(255,107,53,.42); color:#ffad72; font:600 10px var(--mono); vertical-align:2px; background:linear-gradient(135deg,rgba(255,107,53,.13),rgba(139,124,246,.06)); }
 
   /* header */
-  header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:28px; }
-  .brand { display:flex; align-items:center; gap:10px; font-family:"Space Grotesk"; font-weight:700; font-size:20px; }
-  .logo { width:36px; height:36px; border-radius:11px; display:grid; place-items:center;
-          background:linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow:0 6px 20px rgba(255,122,26,.35); }
-  .badge { font-size:12px; font-weight:600; padding:6px 11px; border-radius:99px; border:1px solid var(--line);
-           background:rgba(255,255,255,.03); color:var(--muted); white-space:nowrap; }
-  .badge b { color:var(--accent); }
+  header { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; margin-bottom:44px; padding-top:12px; border-top:2px solid transparent; border-image:var(--spectrum) 1; }
+  .brand { grid-column:2; display:flex; align-items:center; justify-content:center; gap:10px; font-family:var(--display); font-weight:700; font-size:24px; letter-spacing:.02em; text-transform:uppercase; }
+  .logo { width:36px; height:36px; border-radius:5px; display:grid; place-items:center;
+          background:linear-gradient(var(--card2),var(--card2)) padding-box,var(--spectrum) border-box; border:1px solid transparent; color:#ff9f68; box-shadow:0 0 24px rgba(255,107,53,.14); }
+  .logo svg { width:19px; height:19px; }
+  .badge { font:600 10px var(--mono); padding:7px 10px; border-radius:4px; border:1px solid var(--line);
+           background:linear-gradient(110deg,rgba(255,107,53,.09),rgba(40,199,217,.07)),var(--card); color:var(--muted); white-space:nowrap; text-transform:uppercase; letter-spacing:.06em; justify-self:end; }
+  .badge b { color:#ffad72; }
 
-  .hero h1 { font-size:clamp(32px, 7vw, 48px); line-height:1.05; margin:0 0 10px; }
-  .hero h1 span { background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .hero p { margin:0 0 24px; color:var(--muted); font-size:17px; max-width:560px; }
+  .hero { position:relative; padding:0; text-align:center; }
+  .hero::before { content:""; position:absolute; left:50%; bottom:10px; width:88px; height:2px; transform:translateX(-50%); background:var(--spectrum); box-shadow:0 0 22px rgba(255,107,53,.2); }
+  .hero h1 { font-size:clamp(42px, 8vw, 62px); line-height:.95; margin:0 0 14px; text-transform:uppercase; letter-spacing:.01em; }
+  .hero h1 span { color:var(--accent); background:var(--heat); background-clip:text; -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p { margin:0 auto 34px; color:var(--muted); font-size:17px; max-width:590px; }
 
-  .card { background:linear-gradient(180deg,var(--card),var(--bg2)); border:1px solid var(--line);
-          border-radius:var(--radius); padding:18px; margin-bottom:14px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-top-color:#465063;
+          border-radius:var(--radius); padding:20px; margin-bottom:14px; box-shadow:0 14px 34px rgba(0,0,0,.24); }
 
   /* upload */
   .drop { position:relative; display:grid; place-items:center; text-align:center; min-height:220px;
-          border:2px dashed #323a4a; border-radius:14px; cursor:pointer; overflow:hidden; transition:.2s; background:rgba(0,0,0,.18); }
-  .drop:hover, .drop.drag { border-color:var(--accent); background:rgba(255,176,32,.05); }
+          border:1px dashed #4a5668; border-radius:5px; cursor:pointer; overflow:hidden; transition:border-color .2s,background-color .2s,box-shadow .2s; background:radial-gradient(circle at 50% 38%,rgba(255,107,53,.08),transparent 45%),#10141a; }
+  .drop:hover, .drop.drag { border-color:var(--accent); background:radial-gradient(circle at 50% 38%,rgba(255,107,53,.13),transparent 48%),#161923; box-shadow:inset 0 0 0 1px rgba(255,159,67,.08); }
   .drop .cta { padding:24px; }
-  .drop .icon { font-size:40px; margin-bottom:6px; }
-  .drop strong { display:block; font-size:18px; }
+  .drop .icon { width:48px; height:48px; margin:0 auto 12px; display:grid; place-items:center; border:1px solid rgba(255,107,53,.45); border-radius:50%; color:#ffd0a8; background:linear-gradient(145deg,rgba(255,107,53,.2),rgba(139,124,246,.12)); transition:transform .2s ease-out,border-color .2s; }
+  .drop:hover .icon { transform:rotate(-6deg); border-color:var(--accent); }
+  .drop .icon svg { width:22px; height:22px; }
+  .drop strong { display:block; font-family:var(--display); font-size:22px; text-transform:uppercase; letter-spacing:.03em; }
+  .drop .muted { font:12px var(--mono); }
   .drop img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; }
   .drop.has-img { border-style:solid; border-color:var(--line); min-height:300px; }
   .drop.has-img img { display:block; }
   .drop.has-img .cta { display:none; }
-  .retake { position:absolute; right:10px; top:10px; z-index:3; display:none; font-size:13px; font-weight:600;
-            padding:7px 12px; border-radius:99px; border:0; background:rgba(0,0,0,.65); color:#fff; cursor:pointer; backdrop-filter:blur(6px); }
+  .retake { position:absolute; right:10px; top:10px; z-index:3; display:none; min-height:42px; font:600 11px var(--mono);
+            padding:7px 12px; border-radius:4px; border:1px solid rgba(255,255,255,.25); background:rgba(13,16,17,.82); color:#fff; cursor:pointer; backdrop-filter:blur(6px); text-transform:uppercase; }
   .drop.has-img .retake { display:block; }
 
-  /* scanning & spinning animations */
+  /* scanning */
   .scan { position:absolute; inset:0; display:none; z-index:2; pointer-events:none; }
   .scanning .scan { display:block; }
   .scan::before { content:""; position:absolute; inset:0; background:rgba(11,13,18,.35);
                   background-image:linear-gradient(rgba(255,176,32,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,176,32,.08) 1px, transparent 1px);
                   background-size:28px 28px; }
   .scan::after { content:""; position:absolute; left:0; right:0; height:90px; top:-90px;
-                 background:linear-gradient(180deg, transparent, rgba(255,176,32,.45), transparent);
+                 background:linear-gradient(180deg, transparent, rgba(40,199,217,.34),rgba(255,107,53,.42), transparent);
                  border-bottom:2px solid var(--accent); animation:sweep 1.6s ease-in-out infinite; }
   @keyframes sweep { to { top:100%; } }
-  @keyframes spin { 100% { transform: rotate(360deg); } }
 
-  textarea { width:100%; margin-top:14px; padding:13px 14px; min-height:54px; resize:vertical; font:inherit; font-size:16px;
-             color:var(--fg); background:#0d1016; border:1px solid var(--line); border-radius:12px; outline:none; }
-  textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,176,32,.15); }
+  textarea { width:100%; margin-top:14px; padding:13px 14px; min-height:54px; resize:vertical; font:16px var(--body);
+             color:var(--fg); background:#101415; border:1px solid var(--line); border-radius:5px; outline:none; }
+  textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(255,107,53,.14),0 0 28px rgba(139,124,246,.08); }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-  .chip { font:inherit; font-size:13px; padding:7px 12px; border-radius:99px; border:1px solid var(--line);
-          background:var(--card2); color:var(--fg); cursor:pointer; transition:.15s; }
+  .chip { font:500 11px var(--mono); min-height:34px; padding:7px 10px; border-radius:4px; border:1px solid var(--line);
+          background:var(--card2); color:var(--fg); cursor:pointer; transition:border-color .15s,color .15s,background-color .15s; }
   .chip:hover { border-color:var(--accent); color:var(--accent); }
 
-  .go { width:100%; margin-top:16px; padding:16px; border:0; border-radius:14px; cursor:pointer;
-        font:700 18px "Space Grotesk", Inter, sans-serif; color:#16110a;
-        background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 10px 30px rgba(255,122,26,.3); transition:.15s; }
-  .go:hover { transform:translateY(-1px); box-shadow:0 14px 34px rgba(255,122,26,.4); }
+  .go { width:100%; min-height:52px; margin-top:16px; padding:14px; border:1px solid var(--accent); border-radius:5px; cursor:pointer;
+        font:700 19px var(--display); text-transform:uppercase; letter-spacing:.06em; color:#fff;
+        background:var(--heat); box-shadow:0 10px 28px rgba(255,107,53,.18); transition:filter .15s,border-color .15s,transform .15s,box-shadow .15s; }
+  .go:hover { transform:translateY(-1px); filter:saturate(1.12) brightness(1.06); border-color:#ff9f43; box-shadow:0 14px 34px rgba(255,107,53,.26); }
   .go:disabled { opacity:.6; cursor:wait; transform:none; }
-  .status { text-align:center; margin-top:12px; color:var(--muted); font-size:14px; min-height:21px; }
-  #err { display:none; margin-bottom:14px; padding:14px 16px; border-radius:14px; background:rgba(248,113,113,.1);
+  .status { text-align:center; margin-top:12px; color:var(--muted); font:12px var(--mono); min-height:21px; }
+  #err { display:none; margin-bottom:14px; padding:14px 16px; border-radius:5px; background:rgba(248,113,113,.1);
          border:1px solid rgba(248,113,113,.35); color:#fecaca; white-space:pre-wrap; }
 
   /* results */
@@ -93,22 +104,21 @@
   .reveal { animation:rise .45s ease both; }
   @keyframes rise { from { opacity:0; transform:translateY(12px); } }
   .summary { display:flex; gap:16px; align-items:flex-start; }
-  .summary img { width:92px; height:92px; object-fit:cover; border-radius:14px; flex-shrink:0; border:1px solid var(--line); }
-  .summary h2 { margin:0 0 4px; font-size:26px; line-height:1.15; }
+  .summary img { width:92px; height:92px; object-fit:cover; border-radius:5px; flex-shrink:0; border:1px solid var(--line); }
+  .summary h2 { margin:0 0 4px; font-size:32px; line-height:1; text-transform:uppercase; }
   .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
-  .stat { background:#0d1016; border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
-  .stat small { display:block; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .stat { background:linear-gradient(135deg,rgba(40,199,217,.055),rgba(139,124,246,.035)),#10141a; border:1px solid var(--line); border-radius:5px; padding:10px 12px; }
+  .stat small { display:block; color:var(--muted); font:10px var(--mono); text-transform:uppercase; letter-spacing:.07em; }
   .stat b { font-size:16px; text-transform:capitalize; }
-  .meter { height:6px; border-radius:99px; background:#262c39; margin-top:7px; overflow:hidden; }
+  .meter { height:6px; border-radius:99px; background:#262d3a; margin-top:7px; overflow:hidden; }
   .meter i { display:block; height:100%; border-radius:inherit; }
 
   .pills { display:flex; flex-wrap:wrap; gap:6px; }
-  .pill { font-size:13px; padding:5px 11px; border-radius:99px; background:var(--card2); border:1px solid var(--line); }
+  .pill { font:11px var(--mono); padding:4px 8px; border-radius:3px; background:var(--card2); border:1px solid var(--line); }
 
   .safety { display:flex; gap:14px; border-color:rgba(251,191,36,.45); background:linear-gradient(180deg,rgba(251,191,36,.10),rgba(251,191,36,.03)); }
-  .safety.danger { border-color:rgba(248,113,113,.6); background:linear-gradient(180deg,rgba(248,113,113,.16),rgba(248,113,113,.04)); animation:pulse 2s ease-in-out infinite; }
-  @keyframes pulse { 50% { box-shadow:0 0 0 4px rgba(248,113,113,.12); } }
-  .safety .sicon { font-size:28px; line-height:1; }
+  .safety.danger { border-color:rgba(248,113,113,.6); background:linear-gradient(180deg,rgba(248,113,113,.16),rgba(248,113,113,.04)); }
+  .safety .sicon { width:30px; height:30px; flex:0 0 30px; display:grid; place-items:center; border:1px solid currentColor; border-radius:50%; font:600 15px var(--mono); }
   .safety h3 { color:var(--warn); text-transform:uppercase; letter-spacing:.04em; font-size:14px; }
   .safety.danger h3 { color:var(--bad); }
   .safety ul { margin:0; padding-left:18px; }
@@ -116,47 +126,26 @@
   .diag p { font-size:17px; margin:0 0 10px; }
 
   .verdict-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
-  .decision { font:700 15px "Space Grotesk"; text-transform:uppercase; letter-spacing:.06em; padding:8px 14px; border-radius:99px; }
+  .decision { font:600 11px var(--mono); text-transform:uppercase; letter-spacing:.06em; padding:8px 11px; border-radius:4px; }
   .decision.repair { color:var(--ok); background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.4); }
   .decision.replace { color:var(--bad); background:rgba(248,113,113,.12); border:1px solid rgba(248,113,113,.4); }
   .decision.pro { color:var(--warn); background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4); }
   .bars { margin:16px 0 8px; display:grid; gap:10px; }
   .bar { display:grid; grid-template-columns:72px 1fr 64px; align-items:center; gap:10px; font-size:14px; }
-  .bar .track { height:14px; background:#0d1016; border:1px solid var(--line); border-radius:99px; overflow:hidden; }
+  .bar .track { height:12px; background:#101415; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
   .bar .fill { height:100%; width:0; border-radius:99px; transition:width .9s cubic-bezier(.2,.8,.2,1); }
   .bar b { text-align:right; }
   .savings { display:inline-block; margin-top:6px; font-weight:700; color:var(--ok); }
 
-  /* AI Video Player Box */
-  .video-player {
-    width: 100%;
-    aspect-ratio: 16/9;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #0d1016;
-    border: 1px solid var(--line);
-    margin-top: 10px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .video-player video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: none;
-  }
-
   .progress { display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:14px; color:var(--muted); }
   .progress .meter { flex:1; margin:0; height:8px; }
-  .progress .meter i { background:linear-gradient(90deg,var(--accent),var(--ok)); transition:width .3s; }
+  .progress .meter i { background:var(--spectrum); transition:width .3s; }
   .steps { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
-  .step { display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:12px; background:#0d1016;
-          border:1px solid var(--line); cursor:pointer; transition:.15s; user-select:none; }
-  .step:hover { border-color:#3a4356; }
-  .step .num { flex-shrink:0; width:28px; height:28px; border-radius:50%; display:grid; place-items:center;
-               font:700 13px "Space Grotesk"; background:var(--card2); border:1px solid var(--line); transition:.15s; }
+  .step { display:flex; gap:12px; align-items:flex-start; min-height:52px; padding:12px; border-radius:5px; background:#101415;
+          border:1px solid var(--line); cursor:pointer; transition:border-color .15s,background-color .15s; user-select:none; }
+  .step:hover { border-color:#58667e; background:linear-gradient(100deg,rgba(255,107,53,.055),rgba(40,199,217,.04)),#101415; }
+  .step .num { flex-shrink:0; width:28px; height:28px; border-radius:3px; display:grid; place-items:center;
+               font:600 11px var(--mono); background:var(--card2); border:1px solid var(--line); transition:.15s; }
   .step.done { opacity:.55; }
   .step.done .txt { text-decoration:line-through; }
   .step.done .num { background:var(--ok); border-color:var(--ok); color:#06261a; }
@@ -166,31 +155,31 @@
   .total b { color:var(--fg); }
 
   .links { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .link { display:flex; align-items:center; gap:10px; padding:12px; border-radius:12px; text-decoration:none; color:var(--fg);
-          background:#0d1016; border:1px solid var(--line); transition:.15s; }
-  .link:hover { border-color:var(--accent); transform:translateY(-1px); }
-  .link .li { font-size:22px; }
+  .link { display:flex; align-items:center; gap:10px; min-height:62px; padding:12px; border-radius:5px; text-decoration:none; color:var(--fg);
+          background:#101415; border:1px solid var(--line); transition:border-color .15s,transform .15s; }
+  .link:hover { border-color:var(--accent); transform:translateY(-1px); background:linear-gradient(105deg,rgba(255,107,53,.08),rgba(139,124,246,.055)),#101415; }
+  .link .li { width:30px; height:30px; display:grid; place-items:center; border:1px solid var(--line); border-radius:3px; color:var(--accent); font:600 9px var(--mono); }
   .link b { display:block; font-size:14px; }
   .link small { color:var(--muted); font-size:12px; }
 
   .shop { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
-  .shop li { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:#0d1016; border:1px solid var(--line); flex-wrap:wrap; }
+  .shop li { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:5px; background:#101415; border:1px solid var(--line); flex-wrap:wrap; }
   .shop .what { flex:1; min-width:150px; }
   .shop .what b { display:block; font-size:15px; }
   .shop .what small { color:var(--muted); font-size:12px; }
-  .tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:3px 8px; border-radius:99px; }
+  .tag { font:600 9px var(--mono); text-transform:uppercase; letter-spacing:.06em; padding:3px 6px; border-radius:3px; border:1px solid currentColor; }
   .tag.tool { color:#93c5fd; background:rgba(147,197,253,.12); }
   .tag.part { color:var(--accent); background:rgba(255,176,32,.12); }
   .price { font-weight:700; min-width:40px; text-align:right; }
   .buy { display:flex; gap:6px; }
-  .buy a { font-size:12px; font-weight:600; padding:6px 10px; border-radius:99px; text-decoration:none; color:var(--fg);
+  .buy a { font:500 10px var(--mono); padding:7px 9px; border-radius:3px; text-decoration:none; color:var(--fg);
            background:var(--card2); border:1px solid var(--line); white-space:nowrap; }
   .buy a:hover { border-color:var(--accent); color:var(--accent); }
 
-  .again { width:100%; padding:14px; border-radius:14px; border:1px solid var(--line); background:var(--card);
-           color:var(--fg); font:600 16px Inter; cursor:pointer; }
-  .again:hover { border-color:var(--accent); }
-  footer { text-align:center; color:var(--muted); font-size:13px; margin-top:30px; }
+  .again { width:100%; min-height:50px; padding:14px; border-radius:5px; border:1px solid var(--line); background:var(--card);
+           color:var(--fg); font:700 17px var(--display); letter-spacing:.05em; text-transform:uppercase; cursor:pointer; }
+  .again:hover { border-color:var(--accent); background:linear-gradient(105deg,rgba(255,107,53,.08),rgba(40,199,217,.05)),var(--card); }
+  button:focus-visible,a:focus-visible,label:focus-within,textarea:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
 
   @media (max-width:560px) {
     .stats { grid-template-columns:1fr 1fr; } .stats .stat:last-child { grid-column:span 2; }
@@ -200,26 +189,30 @@
     .summary h2 { font-size:22px; }
     .badge .long { display:none; }
   }
+  @media (prefers-reduced-motion:reduce) {
+    html { scroll-behavior:auto; }
+    *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <div class="brand"><div class="logo">🔧</div>Fix-it Lens</div>
+    <div class="brand"><div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5-5l2.2 2.2-2.8 2.8-2.2-2.2a4 4 0 0 0 5 5l7.3 7.3a2 2 0 1 1-2.8 2.8l-7.3-7.3"/></svg></div>Fix-it Lens</div>
     <div class="badge"><span class="long">Powered by </span><b>Gemma 4</b></div>
   </header>
 
   <section class="hero" id="hero">
     <h1>Don't toss it. <span>Fix it.</span></h1>
-    <p>Snap a photo of anything broken. Get the likely fault, a repair-or-replace verdict, and an AI-simulated repair video in seconds.</p>
+    <p>Snap a photo of anything broken. Get the likely fault, a repair-or-replace verdict, and step-by-step instructions in seconds.</p>
   </section>
 
   <section class="card" id="input">
-    <label class="drop" id="drop" for="file">
-      <img id="preview" alt="Your photo">
+    <label class="drop" id="drop" for="file" tabindex="0">
+      <img id="preview" alt="Selected item for diagnosis">
       <div class="scan"></div>
       <div class="cta">
-        <div class="icon">📷</div>
+        <div class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
         <strong>Take or upload a photo</strong>
         <span class="muted">Tap here, or drag an image in</span>
       </div>
@@ -227,7 +220,7 @@
     </label>
     <input id="file" type="file" accept="image/*" capture="environment" hidden>
 
-    <textarea id="desc" rows="1" placeholder="What's wrong? e.g. &quot;wobbles when I sit down&quot;"></textarea>
+    <textarea id="desc" rows="1" aria-label="Describe the problem" placeholder="What's wrong? e.g. &quot;wobbles when I sit down&quot;"></textarea>
     <div class="chips">
       <button class="chip" type="button">Won't turn on</button>
       <button class="chip" type="button">Wobbly / loose</button>
@@ -237,13 +230,12 @@
     </div>
 
     <button class="go" id="go">Diagnose it →</button>
-    <div class="status" id="status"></div>
+    <div class="status" id="status" aria-live="polite"></div>
   </section>
 
-  <div id="err"></div>
+  <div id="err" role="alert"></div>
   <div id="out"></div>
 
-  <footer>Fix-it Lens · Built at Hacktoberfest × CruzHacks with Gemma 4 · Estimates are rough. When in doubt, ask a pro.</footer>
 </main>
 
 <script>
@@ -262,6 +254,9 @@ function setFile(f) {
 }
 $("file").addEventListener("change", e => setFile(e.target.files[0]));
 $("retake").addEventListener("click", e => { e.preventDefault(); $("file").value = ""; $("file").click(); });
+$("drop").addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); }
+});
 
 const drop = $("drop");
 ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("drag"); }));
@@ -314,7 +309,7 @@ const STATUS = [
   "Identifying fractured parts…",
   "Assessing structural integrity…",
   "Pricing repair vs. replace…",
-  "Choreographing repair simulation…"
+  "Writing your repair steps…"
 ];
 function startStatus() {
   let i = 0; $("status").textContent = STATUS[0];
@@ -348,15 +343,14 @@ function render(r) {
   const steps = r.steps || [];
 
   const res = r.resources || {};
-  const vid = r.video || {};
-  const simPrompt = vid.simulation_prompt || r.simulation_prompt || `Repairing and assembling the ${r.item || "broken object"}`;
-  const videoQ = vid.youtube_query || res.video_query || `how to fix ${r.item || ""}`;
+  const fault = String(d.likely_fault || "").split(/[.:;,]/)[0];
+  const videoQ = res.video_query || `how to fix ${r.item || ""} ${fault}`;
   const guideQ = res.guide_query || `${r.item || ""} repair`;
 
   $("out").innerHTML = `
     ${level !== "none" ? `
     <section class="card safety ${level === "danger" ? "danger" : ""} reveal">
-      <div class="sicon">${level === "danger" ? "⛔" : "⚠️"}</div>
+      <div class="sicon" aria-hidden="true">!</div>
       <div><h3>${level === "danger" ? "Danger: read before touching" : "Use caution"}</h3>
         <ul>${(s.warnings || []).map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>
     </section>` : ""}
@@ -378,7 +372,7 @@ function render(r) {
     </section>
 
     <section class="card diag reveal">
-      <h3>🔍 Diagnosis</h3>
+      <h3><span class="section-mark">01</span>Diagnosis</h3>
       <p>${esc(d.likely_fault)}</p>
       ${d.other_possibilities?.length ? `<div class="muted" style="font-size:14px;margin-bottom:6px">Could also be:</div>
         <div class="pills">${d.other_possibilities.map(o => `<span class="pill">${esc(o)}</span>`).join("")}</div>` : ""}
@@ -386,7 +380,7 @@ function render(r) {
 
     <section class="card reveal">
       <div class="verdict-head">
-        <h3 style="margin:0">💸 Repair or replace?</h3>
+        <h3 style="margin:0"><span class="section-mark">02</span>Repair or replace?</h3>
         <span class="decision ${cls}">${esc(v.decision || "unsure")}</span>
       </div>
       <div class="bars">
@@ -397,41 +391,9 @@ function render(r) {
       <p class="muted" style="margin:8px 0 0">${esc(v.reasoning)}</p>
     </section>
 
-    <!-- 🎬 AI Repair Simulation Card (Gemma Directed) -->
-    <section class="card reveal" id="simulationSection">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3 style="margin:0">🎬 AI Repair Simulation</h3>
-        <span class="badge" style="border-color:var(--accent);color:var(--accent)">Gemma Directed</span>
-      </div>
-      
-      <p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.4">
-        ${esc(simPrompt)}
-      </p>
-
-      <div class="video-player" id="simPlayerBox">
-        <!-- Ready / CTA State -->
-        <div id="simCta" style="text-align:center;padding:24px;">
-          <button type="button" class="go" id="btnGenSim" style="margin:0;padding:12px 22px;font-size:15px;width:auto;">
-            ✨ Generate AI Repair Video
-          </button>
-          <div class="muted" style="font-size:12px;margin-top:8px">Simulates reassembling and curing the broken parts</div>
-        </div>
-
-        <!-- Generating / Loading State -->
-        <div id="simLoading" style="display:none;text-align:center;padding:24px;">
-          <div style="font-size:32px;animation:spin 1.5s linear infinite;display:inline-block">⚙️</div>
-          <div style="font-weight:600;margin-top:8px">Synthesizing AI Video…</div>
-          <div class="muted" style="font-size:12px">Rendering frames of the repair transformation (~10s)</div>
-        </div>
-
-        <!-- Active Native HTML5 Video Player -->
-        <video id="simVideo" controls autoplay loop muted playsinline></video>
-      </div>
-    </section>
-
     ${steps.length ? `
     <section class="card reveal">
-      <h3>🛠️ Step by step</h3>
+      <h3><span class="section-mark">03</span>Step by step</h3>
       <div class="progress"><div class="meter"><i id="prog" style="width:0"></i></div><span id="progText">0 / ${steps.length}</span></div>
       <ol class="steps">
         ${steps.map((t, i) => `<li class="step ${i === 0 && level !== "none" ? "safety-step" : ""}"><span class="num">${i + 1}</span><span class="txt">${esc(String(t).replace(/^\s*\d+[.)]\s*/, ""))}</span></li>`).join("")}
@@ -441,7 +403,7 @@ function render(r) {
 
     ${shopItems.length ? `
     <section class="card reveal">
-      <h3>🛒 What you'll need</h3>
+      <h3><span class="section-mark">04</span>What you'll need</h3>
       <ul class="shop">
         ${shopItems.map(i => {
           const term = i.search_term || i.name;
@@ -460,22 +422,22 @@ function render(r) {
     </section>` : ""}
 
     <section class="card reveal">
-      <h3>📚 Learn how</h3>
+      <h3><span class="section-mark">05</span>Learn how</h3>
       <div class="links">
-        <a class="link" href="${vid.youtube_search_url || LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
-        <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">🔧</span><span><b>Repair guides</b><small>iFixit</small></span></a>
-        <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">🔎</span><span><b>More help</b><small>Google</small></span></a>
+        <a class="link" href="${LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">YT</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
+        <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">IF</span><span><b>Repair guides</b><small>iFixit</small></span></a>
+        <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">WEB</span><span><b>More help</b><small>Google</small></span></a>
       </div>
     </section>
 
     ${r.questions?.length ? `
     <section class="card reveal">
-      <h3>🤔 To be more sure, tell us</h3>
+      <h3><span class="section-mark">06</span>To be more sure, tell us</h3>
       <ul>${r.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>
       <div class="muted" style="font-size:14px">Add the answer to the description above and diagnose again.</div>
     </section>` : ""}
 
-    <button class="again reveal" id="again">📷 Fix something else</button>
+    <button class="again reveal" id="again">Fix something else</button>
   `;
 
   // Stagger reveal animations + cost fill animation
@@ -488,51 +450,8 @@ function render(r) {
     el.classList.toggle("done");
     const n = stepEls.filter(s => s.classList.contains("done")).length;
     $("prog").style.width = (n / stepEls.length * 100) + "%";
-    $("progText").textContent = n === stepEls.length ? "Fixed! 🎉" : `${n} / ${stepEls.length}`;
+    $("progText").textContent = n === stepEls.length ? "Fixed" : `${n} / ${stepEls.length}`;
   }));
-
-  // Safely trigger video generation without Safari pattern crashes
-  const btnGenSim = $("btnGenSim");
-  if (btnGenSim) {
-    btnGenSim.addEventListener("click", async () => {
-      $("simCta").style.display = "none";
-      $("simLoading").style.display = "block";
-      hideError();
-
-      try {
-        const simFd = new FormData();
-        simFd.append("prompt", simPrompt);
-        
-        const res = await fetch("/api/generate-simulation", { method: "POST", body: simFd });
-        const rawText = await res.text();
-        
-        let data;
-        try {
-          data = JSON.parse(rawText);
-        } catch {
-          throw new Error(rawText || `Server error (${res.status})`);
-        }
-        
-        if (!res.ok || data.error) {
-          throw new Error(data.error || `Server error (${res.status})`);
-        }
-
-        if (data.video_url) {
-          $("simLoading").style.display = "none";
-          const vid = $("simVideo");
-          vid.src = data.video_url;
-          vid.style.display = "block";
-          vid.play().catch(() => {});
-        } else {
-          throw new Error("No video URL returned from server.");
-        }
-      } catch (err) {
-        $("simLoading").style.display = "none";
-        $("simCta").style.display = "block";
-        showError("Simulation warning: " + err.message);
-      }
-    });
-  }
 
   // Reset button
   $("again").addEventListener("click", () => {

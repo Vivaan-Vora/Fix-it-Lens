@@ -4,7 +4,7 @@ Every year, millions of household items, from cracked monobloc chairs to applian
 
 Powered by Gemma, Fix-it Lens turns any smartphone camera into an intelligent diagnostic scanner:
 
-Visual Fault & Part Recognition: Snap a photo of any broken object. Gemma inspects the damage, isolates fractured components, and diagnoses root causes—differentiating between sudden mechanical stress fractures, UV embrittlement, or electrical wear.
+Visual Fault & Part Recognition: Snap a photo of any broken object. Gemma inspects the damage, isolates fractured components, and diagnoses root causes differentiating between sudden mechanical stress fractures, UV embrittlement, or electrical wear.
 
 Safety-First Triage: Before anyone picks up a screwdriver, Fix-it Lens flags hidden hazards, such as mains voltage, swollen lithium-ion cells, toxic fumes, or structural failure risks, making the first step a mandatory safety check.
 

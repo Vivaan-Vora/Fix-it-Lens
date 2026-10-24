@@ -140,9 +140,30 @@
   .step.done .num { background:var(--ok); border-color:var(--ok); color:#06261a; }
   .step.safety-step { border-color:rgba(251,191,36,.45); }
 
-  .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .total { margin-top:10px; font-size:14px; color:var(--muted); }
+  .total { margin-top:12px; font-size:14px; color:var(--muted); }
   .total b { color:var(--fg); }
+
+  .links { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .link { display:flex; align-items:center; gap:10px; padding:12px; border-radius:12px; text-decoration:none; color:var(--fg);
+          background:#0d1016; border:1px solid var(--line); transition:.15s; }
+  .link:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .link .li { font-size:22px; }
+  .link b { display:block; font-size:14px; }
+  .link small { color:var(--muted); font-size:12px; }
+
+  .shop { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  .shop li { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:#0d1016; border:1px solid var(--line); flex-wrap:wrap; }
+  .shop .what { flex:1; min-width:150px; }
+  .shop .what b { display:block; font-size:15px; }
+  .shop .what small { color:var(--muted); font-size:12px; }
+  .tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:3px 8px; border-radius:99px; }
+  .tag.tool { color:#93c5fd; background:rgba(147,197,253,.12); }
+  .tag.part { color:var(--accent); background:rgba(255,176,32,.12); }
+  .price { font-weight:700; min-width:40px; text-align:right; }
+  .buy { display:flex; gap:6px; }
+  .buy a { font-size:12px; font-weight:600; padding:6px 10px; border-radius:99px; text-decoration:none; color:var(--fg);
+           background:var(--card2); border:1px solid var(--line); white-space:nowrap; }
+  .buy a:hover { border-color:var(--accent); color:var(--accent); }
 
   .again { width:100%; padding:14px; border-radius:14px; border:1px solid var(--line); background:var(--card);
            color:var(--fg); font:600 16px Inter; cursor:pointer; }
@@ -151,7 +172,8 @@
 
   @media (max-width:560px) {
     .stats { grid-template-columns:1fr 1fr; } .stats .stat:last-child { grid-column:span 2; }
-    .two { grid-template-columns:1fr; }
+    .links { grid-template-columns:1fr; }
+    .buy { width:100%; } .buy a { flex:1; text-align:center; }
     .summary img { width:72px; height:72px; }
     .summary h2 { font-size:22px; }
     .badge .long { display:none; }
@@ -252,6 +274,16 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const num = v => { const n = parseFloat(String(v ?? "").replace(/[^0-9.]/g, "")); return isNaN(n) ? null : n; };
 const money = v => { const n = num(v); return n === null ? "?" : "$" + Math.round(n).toLocaleString(); };
 const cap = s => s ? String(s)[0].toUpperCase() + String(s).slice(1) : "";
+const q = s => encodeURIComponent(String(s || "").trim());
+// We build search links ourselves instead of trusting model-written URLs, so links never 404.
+const LINKS = {
+  youtube: s => `https://www.youtube.com/results?search_query=${q(s)}`,
+  ifixit: s => `https://www.ifixit.com/Search?query=${q(s)}`,
+  google: s => `https://www.google.com/search?q=${q(s)}`,
+  amazon: s => `https://www.amazon.com/s?k=${q(s)}`,
+  homedepot: s => `https://www.homedepot.com/s/${q(s)}`,
+};
+const asItem = x => typeof x === "object" && x ? x : { name: x };
 
 function showError(msg) { $("err").textContent = msg; $("err").style.display = "block"; }
 function hideError() { $("err").style.display = "none"; }
@@ -281,8 +313,16 @@ function render(r) {
   const maxC = Math.max(rc || 0, pc || 0, 1);
   const savings = rc !== null && pc !== null && pc > rc ? pc - rc : null;
 
-  const mats = (r.materials_needed || []).map(m => typeof m === "object" ? m : { name: m });
-  const matTotal = mats.reduce((t, m) => t + (num(m.approx_cost_usd) || 0), 0);
+  const shopItems = [
+    ...(r.materials_needed || []).map(m => ({ ...asItem(m), kind: "part" })),
+    ...(r.tools_needed || []).map(t => ({ ...asItem(t), kind: "tool" })),
+  ].filter(i => i.name);
+  const shopTotal = shopItems.reduce((t, i) => t + (num(i.approx_cost_usd) || 0), 0);
+
+  const res = r.resources || {};
+  const fault = String(d.likely_fault || "").split(/[.:;,]/)[0];
+  const videoQ = res.video_query || `how to fix ${r.item || ""} ${fault}`;
+  const guideQ = res.guide_query || `${r.item || ""} repair`;
 
   const steps = r.steps || [];
 
@@ -340,13 +380,34 @@ function render(r) {
       <div class="muted" style="font-size:13px;margin-top:10px">Tap a step to check it off.</div>
     </section>` : ""}
 
-    ${(r.tools_needed?.length || mats.length) ? `
-    <section class="two reveal">
-      <div class="card" style="margin:0"><h3>🧰 Tools</h3><div class="pills">${(r.tools_needed || []).map(t => `<span class="pill">${esc(t)}</span>`).join("") || '<span class="muted">None needed</span>'}</div></div>
-      <div class="card" style="margin:0"><h3>🔩 Parts & materials</h3><div class="pills">${mats.map(m => `<span class="pill">${esc(m.name)}${num(m.approx_cost_usd) ? ` · ${money(m.approx_cost_usd)}` : ""}</span>`).join("") || '<span class="muted">None needed</span>'}</div>
-        ${matTotal ? `<div class="total">Est. parts total: <b>${money(matTotal)}</b></div>` : ""}</div>
+    ${shopItems.length ? `
+    <section class="card reveal">
+      <h3>🛒 What you'll need</h3>
+      <ul class="shop">
+        ${shopItems.map(i => {
+          const term = i.search_term || i.name;
+          return `<li>
+            <span class="tag ${i.kind}">${i.kind}</span>
+            <span class="what"><b>${esc(cap(i.name))}</b>${i.search_term && i.search_term !== i.name ? `<small>Search: “${esc(i.search_term)}”</small>` : ""}</span>
+            <span class="price">${num(i.approx_cost_usd) ? money(i.approx_cost_usd) : ""}</span>
+            <span class="buy">
+              <a href="${LINKS.amazon(term)}" target="_blank" rel="noopener">Amazon</a>
+              <a href="${LINKS.homedepot(term)}" target="_blank" rel="noopener">Home Depot</a>
+            </span>
+          </li>`;
+        }).join("")}
+      </ul>
+      ${shopTotal ? `<div class="total">Est. total if you buy everything: <b>${money(shopTotal)}</b> <span>(you may already own the tools)</span></div>` : ""}
+    </section>` : ""}
+
+    <section class="card reveal">
+      <h3>📚 Learn how</h3>
+      <div class="links">
+        <a class="link" href="${LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
+        <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">🔧</span><span><b>Repair guides</b><small>iFixit</small></span></a>
+        <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">🔎</span><span><b>More help</b><small>Google</small></span></a>
+      </div>
     </section>
-    <div style="height:14px"></div>` : ""}
 
     ${r.questions?.length ? `
     <section class="card reveal">

@@ -66,6 +66,7 @@ Rules:
   (size, type, model, e.g. "700c x 25mm presta inner tube", "#2 phillips screwdriver").
 - Never write URLs; the app builds links from your queries.
 - Be concise. Max 10 steps.
+- Always return a single top-level JSON dictionary {...}, NEVER an array [...].
 """
 
 

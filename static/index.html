@@ -126,6 +126,23 @@
   .bar b { text-align:right; }
   .savings { display:inline-block; margin-top:6px; font-weight:700; color:var(--ok); }
 
+  /* video player */
+  .video-player {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--line);
+    margin-top: 10px;
+  }
+  .video-player iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
   .progress { display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:14px; color:var(--muted); }
   .progress .meter { flex:1; margin:0; height:8px; }
   .progress .meter i { background:linear-gradient(90deg,var(--accent),var(--ok)); transition:width .3s; }
@@ -256,7 +273,6 @@ document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () =
   d.focus();
 }));
 
-// Phone photos are 4-12 MB; shrink before upload so the demo stays fast.
 async function shrink(f, max = 1280) {
   try {
     const bmp = await createImageBitmap(f);
@@ -266,7 +282,7 @@ async function shrink(f, max = 1280) {
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
     const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
     return blob || f;
-  } catch { return f; }  // e.g. HEIC on desktop Chrome: send the original
+  } catch { return f; }
 }
 
 /* ---------- helpers ---------- */
@@ -275,7 +291,7 @@ const num = v => { const n = parseFloat(String(v ?? "").replace(/[^0-9.]/g, ""))
 const money = v => { const n = num(v); return n === null ? "?" : "$" + Math.round(n).toLocaleString(); };
 const cap = s => s ? String(s)[0].toUpperCase() + String(s).slice(1) : "";
 const q = s => encodeURIComponent(String(s || "").trim());
-// We build search links ourselves instead of trusting model-written URLs, so links never 404.
+
 const LINKS = {
   youtube: s => `https://www.youtube.com/results?search_query=${q(s)}`,
   ifixit: s => `https://www.ifixit.com/Search?query=${q(s)}`,
@@ -321,7 +337,11 @@ function render(r) {
 
   const res = r.resources || {};
   const fault = String(d.likely_fault || "").split(/[.:;,]/)[0];
-  const videoQ = res.video_query || `how to fix ${r.item || ""} ${fault}`;
+  
+  // Video handling from Gemma backend
+  const vid = r.video || {};
+  const videoQ = vid.youtube_query || res.video_query || `how to fix ${r.item || ""} ${fault}`;
+  const videoEmbedUrl = vid.youtube_embed_url || `https://www.youtube.com/embed?listType=search&list=${q(videoQ)}`;
   const guideQ = res.guide_query || `${r.item || ""} repair`;
 
   const steps = r.steps || [];
@@ -370,6 +390,23 @@ function render(r) {
       <p class="muted" style="margin:8px 0 0">${esc(v.reasoning)}</p>
     </section>
 
+    <!-- 📹 Live Video Walkthrough Card -->
+    <section class="card reveal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">📹 Video walkthrough</h3>
+        <span class="badge" style="padding:3px 8px;font-size:11px">Auto-matched</span>
+      </div>
+      <div class="video-player">
+        <iframe 
+          src="${videoEmbedUrl}" 
+          title="Repair video walkthrough"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">Tutorial for: “${esc(videoQ)}”</div>
+    </section>
+
     ${steps.length ? `
     <section class="card reveal">
       <h3>🛠️ Step by step</h3>
@@ -403,7 +440,7 @@ function render(r) {
     <section class="card reveal">
       <h3>📚 Learn how</h3>
       <div class="links">
-        <a class="link" href="${LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
+        <a class="link" href="${vid.youtube_search_url || LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
         <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">🔧</span><span><b>Repair guides</b><small>iFixit</small></span></a>
         <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">🔎</span><span><b>More help</b><small>Google</small></span></a>
       </div>
@@ -419,7 +456,7 @@ function render(r) {
     <button class="again reveal" id="again">📷 Fix something else</button>
   `;
 
-  // stagger card entrance + animate cost bars
+  // Stagger card entrance animations & animate cost bars
   document.querySelectorAll("#out .reveal").forEach((el, i) => el.style.animationDelay = `${i * 70}ms`);
   requestAnimationFrame(() => setTimeout(() => document.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%"), 250));
 

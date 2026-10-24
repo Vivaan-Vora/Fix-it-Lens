@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fix-it Lens</title>
+<style>
+  :root { --bg:#0f1115; --card:#1a1d24; --fg:#eef0f4; --muted:#9aa3b2; --accent:#ffb020; --ok:#3ecf8e; --warn:#ffb020; --bad:#ff5c5c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { margin: 0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:14px; }
+  label.drop { display:block; border:2px dashed #3a3f4b; border-radius:12px; padding:24px; text-align:center; cursor:pointer; color:var(--muted); }
+  label.drop:hover { border-color: var(--accent); }
+  #preview { max-width:100%; max-height:280px; border-radius:10px; display:none; margin:12px auto 0; }
+  input[type=text] { width:100%; padding:12px; border-radius:10px; border:1px solid #3a3f4b; background:#12141a; color:var(--fg); font-size:16px; margin-top:12px; }
+  button { width:100%; margin-top:12px; padding:14px; font-size:17px; font-weight:700; border:0; border-radius:10px; background:var(--accent); color:#111; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:wait; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:99px; background:#2a2f3a; font-size:13px; margin:2px 4px 2px 0; }
+  .safety { border-left:6px solid var(--warn); } .safety.danger { border-color:var(--bad); background:#2a1717; } .safety.none { display:none; }
+  .verdict { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .big { font-size:22px; font-weight:800; text-transform:uppercase; }
+  .repair { color:var(--ok); } .replace { color:var(--bad); } .pro { color:var(--warn); }
+  .cost { background:#12141a; padding:10px 14px; border-radius:10px; }
+  ol li { margin: 8px 0; } h3 { margin:0 0 8px; }
+  #err { color:var(--bad); white-space:pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔧 Fix-it Lens</h1>
+  <p class="sub">Point at anything broken. Get a diagnosis, a repair-or-replace verdict, and step-by-step fixes.</p>
+
+  <div class="card">
+    <label class="drop" for="file">📷 Tap to take or upload a photo</label>
+    <input id="file" type="file" accept="image/*" capture="environment" hidden>
+    <img id="preview" alt="preview">
+    <input id="desc" type="text" placeholder="One line: what's wrong? (e.g. 'wobbles when I sit')">
+    <button id="go">Diagnose</button>
+  </div>
+
+  <div id="err"></div>
+  <div id="out"></div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let file = null;
+
+$("file").addEventListener("change", e => {
+  file = e.target.files[0];
+  if (!file) return;
+  $("preview").src = URL.createObjectURL(file);
+  $("preview").style.display = "block";
+});
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const list = a => (a || []).map(x => `<li>${esc(x)}</li>`).join("");
+const pills = a => (a || []).map(x => `<span class="pill">${esc(typeof x === "object" ? `${x.name} (~$${x.approx_cost_usd})` : x)}</span>`).join("");
+
+function render(r) {
+  const v = r.verdict || {}, s = r.safety || {}, d = r.diagnosis || {};
+  const cls = v.decision === "repair" ? "repair" : v.decision === "replace" ? "replace" : "pro";
+  const safetyBlock = s.level && s.level !== "none" ? `
+    <div class="card safety ${esc(s.level)}">
+      <h3>⚠️ Safety (${esc(s.level)})</h3><ul>${list(s.warnings)}</ul>
+    </div>` : "";
+  $("out").innerHTML = `
+    ${safetyBlock}
+    <div class="card">
+      <h3>${esc(r.item)}</h3>
+      <div>${pills(r.parts)}</div>
+    </div>
+    <div class="card">
+      <h3>Diagnosis <span class="pill">${esc(d.confidence)} confidence</span></h3>
+      <p>${esc(d.likely_fault)}</p>
+      ${d.other_possibilities?.length ? `<small>Also possible: ${esc(d.other_possibilities.join("; "))}</small>` : ""}
+    </div>
+    <div class="card">
+      <h3>Repair or replace?</h3>
+      <div class="verdict">
+        <span class="big ${cls}">${esc(v.decision)}</span>
+        <span class="cost">Repair ≈ $${esc(v.repair_cost_usd)}</span>
+        <span class="cost">Replace ≈ $${esc(v.replace_cost_usd)}</span>
+      </div>
+      <p>${esc(v.reasoning)}</p>
+    </div>
+    <div class="card">
+      <h3>Steps <span class="pill">${esc(r.difficulty)}</span><span class="pill">${esc(r.time_estimate)}</span></h3>
+      <ol>${list(r.steps)}</ol>
+      <div><b>Tools:</b> ${pills(r.tools_needed)}</div>
+      <div style="margin-top:6px"><b>Materials:</b> ${pills(r.materials_needed)}</div>
+    </div>
+    ${r.questions?.length ? `<div class="card"><h3>Need more info</h3><ul>${list(r.questions)}</ul></div>` : ""}
+  `;
+}
+
+$("go").addEventListener("click", async () => {
+  $("err").textContent = ""; 
+  if (!file) { $("err").textContent = "Add a photo first."; return; }
+  $("go").disabled = true; $("go").textContent = "Inspecting…"; $("out").innerHTML = "";
+  const fd = new FormData();
+  fd.append("image", file);
+  fd.append("description", $("desc").value);
+  try {
+    const res = await fetch("/api/diagnose", { method: "POST", body: fd });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || res.statusText);
+    render(json);
+  } catch (e) {
+    $("err").textContent = "Error: " + e.message;
+  } finally {
+    $("go").disabled = false; $("go").textContent = "Diagnose";
+  }
+});
+</script>
+</body>
+</html>

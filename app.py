@@ -1,8 +1,11 @@
 import json
 import os
+from pathlib import Path
 import re
+import time
 import urllib.parse
 import urllib.request
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, UploadFile
@@ -14,10 +17,15 @@ from google.genai import types
 load_dotenv()
 
 MODEL = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")  # or gemma-4-31b-it
-REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")  # optional: for AI video generation
+REPLICATE_API_TOKEN = os.getenv(
+    "REPLICATE_API_TOKEN"
+)  # optional: for AI video generation
 client = genai.Client()  # reads GEMINI_API_KEY from environment
 
 app = FastAPI(title="Fix-it Lens")
+
+# Ensure folders exist for file serving
+os.makedirs("static/generated", exist_ok=True)
 
 SYSTEM_PROMPT = """You are Fix-it Lens, an expert repair technician and visual director.
 The user sends a photo of a broken item plus an optional description.
@@ -72,169 +80,178 @@ Rules:
 
 
 def extract_json(text: str) -> dict:
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            data = json.loads(match.group(0))
-        else:
-            raise
+  text = text.strip()
+  text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
+  try:
+    data = json.loads(text)
+  except json.JSONDecodeError:
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+      data = json.loads(match.group(0))
+    else:
+      raise
 
-    # 1. If Gemma wrapped the entire response in a list [ { ... } ], unpack the first item
-    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-        data = data[0]
+  # If Gemma wrapped the response in a list [ { ... } ], unpack the first item
+  if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+    data = data[0]
 
-    return data
+  return data
+
+
+def fetch_top_youtube_id(query: str) -> str | None:
+  """Finds the first real YouTube video ID for a query without needing an API key."""
+  try:
+    url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(query)}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                " (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+        },
+    )
+    with urllib.request.urlopen(req, timeout=3) as resp:
+      html = resp.read().decode("utf-8", errors="ignore")
+      matches = re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
+      if matches:
+        return matches[0]
+  except Exception as err:
+    print(f"YouTube ID lookup warning: {err}")
+  return None
 
 
 @app.post("/api/diagnose")
 async def diagnose(image: UploadFile = File(...), description: str = Form("")):
-    try:
-        data = await image.read()
-        mime = image.content_type or "image/jpeg"
-        prompt = f"User description: {description or '(none given)'}"
+  try:
+    data = await image.read()
+    mime = image.content_type or "image/jpeg"
+    prompt = f"User description: {description or '(none given)'}"
 
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=[types.Part.from_bytes(data=data, mime_type=mime), prompt],
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                thinking_config=types.ThinkingConfig(thinking_level="minimal"),
-                temperature=0.3,
-                response_mime_type="application/json",
-            ),
-        )
+    response = client.models.generate_content(
+        model=MODEL,
+        contents=[types.Part.from_bytes(data=data, mime_type=mime), prompt],
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+            temperature=0.3,
+            response_mime_type="application/json",
+        ),
+    )
 
-        result = extract_json(response.text)
+    result = extract_json(response.text)
 
-        # 1. Defensive check: make sure result is a dict
-        if not isinstance(result, dict):
-            return JSONResponse(
-                {"error": "Gemma did not return a valid JSON object."},
-                status_code=500,
-            )
+    # 1. Defensive check: make sure result is a dict
+    if not isinstance(result, dict):
+      return JSONResponse(
+          {"error": "Gemma did not return a valid JSON object."},
+          status_code=500,
+      )
 
-        # 2. Defensive check: ensure 'video' is a dict, not a list of strings
-        video_data = result.get("video")
-        if not isinstance(video_data, dict):
-            fallback_query = (
-                str(video_data[0])
-                if isinstance(video_data, list) and len(video_data) > 0
-                else f"how to repair {result.get('item', 'broken object')}"
-            )
-            result["video"] = {
-                "simulation_prompt": fallback_query,
-                "youtube_query": fallback_query,
-            }
+    # 2. Defensive check: ensure 'video' is a dict, not a list of strings
+    video_data = result.get("video")
+    if not isinstance(video_data, dict):
+      fallback_query = (
+          str(video_data[0])
+          if isinstance(video_data, list) and len(video_data) > 0
+          else f"how to repair {result.get('item', 'broken object')}"
+      )
+      result["video"] = {
+          "simulation_prompt": fallback_query,
+          "youtube_query": fallback_query,
+      }
 
-        # 3. Retrieve targeted query and resolve a REAL video ID for the embed
-        query = (
-            result["video"].get("youtube_query")
-            or f"how to repair {result.get('item', 'broken item')}"
-        )
-        video_id = fetch_top_youtube_id(query)
+    # 3. Retrieve targeted query and resolve a REAL video ID for the embed
+    query = (
+        result["video"].get("youtube_query")
+        or f"how to repair {result.get('item', 'broken item')}"
+    )
+    video_id = fetch_top_youtube_id(query)
 
-        encoded_query = urllib.parse.quote_plus(str(query))
-        result["video"]["youtube_search_url"] = (
-            f"https://www.youtube.com/results?search_query={encoded_query}"
-        )
+    encoded_query = urllib.parse.quote_plus(str(query))
+    result["video"]["youtube_search_url"] = (
+        f"https://www.youtube.com/results?search_query={encoded_query}"
+    )
 
-        if video_id:
-            result["video"]["video_id"] = video_id
-            result["video"]["youtube_embed_url"] = (
-                f"https://www.youtube.com/embed/{video_id}"
-            )
-        else:
-            result["video"]["youtube_embed_url"] = None
+    if video_id:
+      result["video"]["video_id"] = video_id
+      result["video"]["youtube_embed_url"] = (
+          f"https://www.youtube.com/embed/{video_id}"
+      )
+    else:
+      result["video"]["youtube_embed_url"] = None
 
-        return result
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    return result
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+
 
 @app.post("/api/generate-simulation")
 async def generate_simulation(prompt: str = Form(...)):
-    """
-    Renders an AI video simulation.
-    Falls back gracefully to a sample repair clip if your API key is on the free tier.
-    """
-    print(f"🎬 Generating simulation for prompt: {prompt}")
+  """Renders an AI video simulation.
 
-    # 1. Try Google Veo (Requires paid Tier 1 in Google AI Studio)
-    try:
-        operation = client.models.generate_videos(
-            model="veo-2.0-generate-001",
-            prompt=f"Photorealistic 4k time-lapse of repair: {prompt}",
-            config=types.GenerateVideosConfig(aspect_ratio="16:9"),
-        )
-        while not operation.done:
-            time.sleep(5)
-            operation = client.operations.get(operation)
+  Falls back gracefully to a sample repair clip if your API key is on the free
+  tier.
+  """
+  print(f"🎬 Generating simulation for prompt: {prompt}")
 
-        video_filename = f"sim_{uuid.uuid4().hex[:8]}.mp4"
-        save_path = Path("static/generated") / video_filename
-
-        generated_video = operation.response.generated_videos[0]
-        client.files.download(file=generated_video.video)
-        generated_video.video.save(str(save_path))
-        return {"video_url": f"/static/generated/{video_filename}"}
-
-    except Exception as veo_err:
-        print(f"⚠️ Veo API note: {veo_err}")
-
-    # 2. Try Replicate fallback if REPLICATE_API_TOKEN is set
-    replicate_token = os.getenv("REPLICATE_API_TOKEN")
-    if replicate_token:
-        try:
-            import replicate
-
-            output = replicate.run(
-                "minimax/video-01",
-                input={"prompt": f"Time-lapse fixing and curing: {prompt}"},
-            )
-            return {"video_url": str(output)}
-        except Exception as rep_err:
-            print(f"⚠️ Replicate note: {rep_err}")
-
-    # 3. DEMO HACKATHON FALLBACK:
-    # If using a free Google key, serve a working repair time-lapse video
-    # Check if a local video exists in static/, otherwise use a public clip
+  try:
+    # 1. Try local demo clip if present
     local_demo = Path("static/repair_demo.mp4")
     if local_demo.exists():
-        return {"video_url": "/static/repair_demo.mp4"}
+      return {"video_url": "/static/repair_demo.mp4"}
 
-    # Reliable public fallback video so the demo never fails on stage
+    # 2. Try Google Veo (only works if billing is enabled on your API key)
+    try:
+      operation = client.models.generate_videos(
+          model="veo-2.0-generate-001",
+          prompt=f"Photorealistic 4k time-lapse of repair: {prompt}",
+          config=types.GenerateVideosConfig(aspect_ratio="16:9"),
+      )
+      while not operation.done:
+        time.sleep(4)
+        operation = client.operations.get(operation)
+
+      video_filename = f"sim_{uuid.uuid4().hex[:8]}.mp4"
+      save_path = Path("static/generated") / video_filename
+
+      generated_video = operation.response.generated_videos[0]
+      client.files.download(file=generated_video.video)
+      generated_video.video.save(str(save_path))
+      return {"video_url": f"/static/generated/{video_filename}"}
+
+    except Exception as veo_err:
+      print(f"⚠️ Veo API note: {veo_err}")
+
+    # 3. Try Replicate fallback if REPLICATE_API_TOKEN is set
+    if REPLICATE_API_TOKEN:
+      try:
+        import replicate
+
+        output = replicate.run(
+            "minimax/video-01",
+            input={"prompt": f"Time-lapse fixing and curing: {prompt}"},
+        )
+        return {"video_url": str(output)}
+      except Exception as rep_err:
+        print(f"⚠️ Replicate note: {rep_err}")
+
+    # 4. Reliable fallback clip so the live demo never fails
     return {
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "video_url": (
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        ),
         "note": "Demo fallback active (Veo requires paid API tier).",
     }
 
-def fetch_top_youtube_id(query: str) -> str | None:
-    """Finds the first real YouTube video ID for a query without needing an API key."""
-    try:
-        url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(query)}"
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
-            # Matches valid 11-character YouTube video IDs from search results
-            matches = re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
-            if matches:
-                return matches[0]
-    except Exception as err:
-        print(f"YouTube ID lookup warning: {err}")
-    return None
+  except Exception as e:
+    print(f"Fatal generate-simulation error: {e}")
+    return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.get("/")
 def index():
-    return FileResponse("static/index.html")
+  return FileResponse("static/index.html")
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

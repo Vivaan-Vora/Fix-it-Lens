@@ -5,10 +5,15 @@ Every year, millions of household items, from cracked monobloc chairs to applian
 Powered by Gemma, Fix-it Lens turns any smartphone camera into an intelligent diagnostic scanner:
 
 Visual Fault & Part Recognition: Snap a photo of any broken object. Gemma inspects the damage, isolates fractured components, and diagnoses root causes—differentiating between sudden mechanical stress fractures, UV embrittlement, or electrical wear.
+
 Safety-First Triage: Before anyone picks up a screwdriver, Fix-it Lens flags hidden hazards, such as mains voltage, swollen lithium-ion cells, toxic fumes, or structural failure risks, making the first step a mandatory safety check.
+
 The "Repair or Replace" Economic Verdict: It calculates side-by-side estimated costs for DIY materials versus full replacement value. It gives you a clear financial verdict and tells you exactly how much money you’ll save by fixing it yourself.
+
 Interactive Action Guide & Smart Cart: Follow an interactive step-by-step checklist with progress tracking, complete with exact tool and material specifications linked directly to store searches.
+
 TBD: Gemma-Directed AI Repair Simulation -> Reading static repair steps can be intimidating. Fix-it Lens choreographs a dynamic, time-lapse visual simulation of the exact physical fix, demonstrating how the broken parts clamp, bond, or solder back together in real time.
+
 Fix-it Lens transforms repair from an intimidating chore into an intuitive, visual, and sustainable everyday habit.
 
 ## Run

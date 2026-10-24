@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import urllib.parse
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, UploadFile
@@ -12,11 +13,12 @@ from google.genai import types
 load_dotenv()
 
 MODEL = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")  # or gemma-4-31b-it
-client = genai.Client()  # reads GEMINI_API_KEY / GOOGLE_API_KEY from env
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")  # optional: for AI video generation
+client = genai.Client()  # reads GEMINI_API_KEY from environment
 
 app = FastAPI(title="Fix-it Lens")
 
-SYSTEM_PROMPT = """You are Fix-it Lens, an expert repair technician.
+SYSTEM_PROMPT = """You are Fix-it Lens, an expert repair technician and visual director.
 The user sends a photo of a broken item plus an optional description.
 Respond with ONLY valid JSON (no markdown fences, no commentary) matching this schema:
 
@@ -43,7 +45,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) matching this s
     "level": "none | caution | danger",
     "warnings": ["specific warnings, e.g. unplug first, do not open swollen batteries"]
   },
-  "questions": ["optional clarifying questions if the photo is ambiguous"]
+  "questions": ["optional clarifying questions if the photo is ambiguous"],
+  "video": {
+    "simulation_prompt": "Cinematic visual prompt for an Image-to-Video AI. Describe the exact physical repair actions on this item in smooth time-lapse (e.g., hands applying epoxy, clamping cracked joint, seam curing into clean seamless finish).",
+    "youtube_query": "Concise, targeted DIY search query to find this exact repair video"
+  }
 }
 
 Rules:
@@ -80,13 +86,55 @@ async def diagnose(image: UploadFile = File(...), description: str = Form("")):
             contents=[types.Part.from_bytes(data=data, mime_type=mime), prompt],
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                # "minimal" = thinking off (faster demo). Use "high" for hard cases.
                 thinking_config=types.ThinkingConfig(thinking_level="minimal"),
                 temperature=0.3,
+                response_mime_type="application/json",  # forces structured JSON from Gemma
             ),
         )
-        return extract_json(response.text)
-    except Exception as e:  # keep the demo alive; show the error
+
+        result = extract_json(response.text)
+
+        # Generate a live YouTube video embed URL from Gemma's targeted query
+        video_info = result.get("video", {})
+        query = video_info.get("youtube_query") or f"how to repair {result.get('item', 'broken object')}"
+        encoded_query = urllib.parse.quote_plus(query)
+
+        # Attach embed and search links so the frontend can immediately play the tutorial
+        result["video"]["youtube_embed_url"] = f"https://www.youtube.com/embed?listType=search&list={encoded_query}"
+        result["video"]["youtube_search_url"] = f"https://www.youtube.com/results?search_query={encoded_query}"
+
+        return result
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/generate-video")
+async def generate_video(prompt: str = Form(...), image: UploadFile = File(None)):
+    """
+    Optional endpoint: Call this if you want to generate an AI Image-to-Video
+    simulation of the repair using an external model (e.g. Replicate MiniMax/Kling).
+    """
+    try:
+        if not REPLICATE_API_TOKEN:
+            return JSONResponse({
+                "status": "skipped",
+                "message": "REPLICATE_API_TOKEN not configured. Use the youtube_embed_url for live video."
+            })
+
+        import replicate
+
+        # Example using MiniMax Image-to-Video on Replicate
+        input_data = {"prompt": prompt}
+        if image:
+            image_bytes = await image.read()
+            input_data["first_frame_image"] = image_bytes
+
+        output = replicate.run(
+            "minimax/video-01",
+            input=input_data
+        )
+        return {"video_url": output}
+    except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 

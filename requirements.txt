@@ -1,5 +1,5 @@
 fastapi
 uvicorn[standard]
 python-multipart
-google-genai
+google-genai>=2.0  # needs Python 3.10+ (older SDKs reject thinking_level)
 python-dotenv

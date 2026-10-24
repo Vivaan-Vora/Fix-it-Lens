@@ -6,7 +6,10 @@ through the repair step by step.
 
 ## Run
 
+Needs Python 3.10+ (the Gemini SDK that supports Gemma 4 thinking settings does not install on 3.9).
+
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env        # paste your Gemini API key (aistudio.google.com)
 uvicorn app:app --reload --host 0.0.0.0 --port 8000

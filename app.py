@@ -73,12 +73,19 @@ def extract_json(text: str) -> dict:
     text = text.strip()
     text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
     try:
-        return json.loads(text)
+        data = json.loads(text)
     except json.JSONDecodeError:
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            return json.loads(match.group(0))
-        raise
+            data = json.loads(match.group(0))
+        else:
+            raise
+
+    # 1. If Gemma wrapped the entire response in a list [ { ... } ], unpack the first item
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        data = data[0]
+
+    return data
 
 
 @app.post("/api/diagnose")
@@ -95,18 +102,32 @@ async def diagnose(image: UploadFile = File(...), description: str = Form("")):
                 system_instruction=SYSTEM_PROMPT,
                 thinking_config=types.ThinkingConfig(thinking_level="minimal"),
                 temperature=0.3,
-                response_mime_type="application/json",  # forces structured JSON from Gemma
+                response_mime_type="application/json",
             ),
         )
 
         result = extract_json(response.text)
 
-        # Generate a live YouTube video embed URL from Gemma's targeted query
-        video_info = result.get("video", {})
-        query = video_info.get("youtube_query") or f"how to repair {result.get('item', 'broken object')}"
-        encoded_query = urllib.parse.quote_plus(query)
+        # 2. Defensive check: make sure result is a dict
+        if not isinstance(result, dict):
+            return JSONResponse({"error": "Gemma did not return a valid JSON object."}, status_code=500)
 
-        # Attach embed and search links so the frontend can immediately play the tutorial
+        # 3. Defensive check: ensure 'video' is a dict, not a list of strings
+        video_data = result.get("video")
+        if not isinstance(video_data, dict):
+            fallback_query = (
+                str(video_data[0])
+                if isinstance(video_data, list) and len(video_data) > 0
+                else f"how to repair {result.get('item', 'broken object')}"
+            )
+            result["video"] = {
+                "simulation_prompt": fallback_query,
+                "youtube_query": fallback_query,
+            }
+
+        query = result["video"].get("youtube_query") or f"how to repair {result.get('item', 'broken item')}"
+        encoded_query = urllib.parse.quote_plus(str(query))
+
         result["video"]["youtube_embed_url"] = f"https://www.youtube.com/embed?listType=search&list={encoded_query}"
         result["video"]["youtube_search_url"] = f"https://www.youtube.com/results?search_query={encoded_query}"
 

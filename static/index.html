@@ -69,6 +69,7 @@
                  background:linear-gradient(180deg, transparent, rgba(255,176,32,.45), transparent);
                  border-bottom:2px solid var(--accent); animation:sweep 1.6s ease-in-out infinite; }
   @keyframes sweep { to { top:100%; } }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
 
   textarea { width:100%; margin-top:14px; padding:13px 14px; min-height:54px; resize:vertical; font:inherit; font-size:16px;
              color:var(--fg); background:#0d1016; border:1px solid var(--line); border-radius:12px; outline:none; }
@@ -126,7 +127,7 @@
   .bar b { text-align:right; }
   .savings { display:inline-block; margin-top:6px; font-weight:700; color:var(--ok); }
 
-  /* video player */
+  /* AI Video Player Box */
   .video-player {
     width: 100%;
     aspect-ratio: 16/9;
@@ -135,12 +136,16 @@
     background: #000;
     border: 1px solid var(--line);
     margin-top: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .video-player iframe {
+  .video-player video {
     width: 100%;
     height: 100%;
-    border: 0;
-    display: block;
+    object-fit: cover;
+    display: none;
   }
 
   .progress { display:flex; align-items:center; gap:10px; margin-bottom:12px; font-size:14px; color:var(--muted); }
@@ -159,14 +164,6 @@
 
   .total { margin-top:12px; font-size:14px; color:var(--muted); }
   .total b { color:var(--fg); }
-
-  .links { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .link { display:flex; align-items:center; gap:10px; padding:12px; border-radius:12px; text-decoration:none; color:var(--fg);
-          background:#0d1016; border:1px solid var(--line); transition:.15s; }
-  .link:hover { border-color:var(--accent); transform:translateY(-1px); }
-  .link .li { font-size:22px; }
-  .link b { display:block; font-size:14px; }
-  .link small { color:var(--muted); font-size:12px; }
 
   .shop { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
   .shop li { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:#0d1016; border:1px solid var(--line); flex-wrap:wrap; }
@@ -189,7 +186,6 @@
 
   @media (max-width:560px) {
     .stats { grid-template-columns:1fr 1fr; } .stats .stat:last-child { grid-column:span 2; }
-    .links { grid-template-columns:1fr; }
     .buy { width:100%; } .buy a { flex:1; text-align:center; }
     .summary img { width:72px; height:72px; }
     .summary h2 { font-size:22px; }
@@ -206,7 +202,7 @@
 
   <section class="hero" id="hero">
     <h1>Don't toss it. <span>Fix it.</span></h1>
-    <p>Snap a photo of anything broken. Get the likely fault, a repair-or-replace verdict, and step-by-step instructions in seconds.</p>
+    <p>Snap a photo of anything broken. Get the likely fault, a repair-or-replace verdict, and an AI-simulated repair video in seconds.</p>
   </section>
 
   <section class="card" id="input">
@@ -293,9 +289,6 @@ const cap = s => s ? String(s)[0].toUpperCase() + String(s).slice(1) : "";
 const q = s => encodeURIComponent(String(s || "").trim());
 
 const LINKS = {
-  youtube: s => `https://www.youtube.com/results?search_query=${q(s)}`,
-  ifixit: s => `https://www.ifixit.com/Search?query=${q(s)}`,
-  google: s => `https://www.google.com/search?q=${q(s)}`,
   amazon: s => `https://www.amazon.com/s?k=${q(s)}`,
   homedepot: s => `https://www.homedepot.com/s/${q(s)}`,
 };
@@ -304,14 +297,14 @@ const asItem = x => typeof x === "object" && x ? x : { name: x };
 function showError(msg) { $("err").textContent = msg; $("err").style.display = "block"; }
 function hideError() { $("err").style.display = "none"; }
 
-const STATUS = ["Looking at your photo…", "Identifying parts…", "Figuring out what broke…", "Pricing repair vs. replace…", "Writing your repair steps…"];
+const STATUS = ["Analyzing with Gemma…", "Identifying fractured parts…", "Assessing structural integrity…", "Pricing repair vs. replace…", "Choreographing repair simulation…"];
 function startStatus() {
   let i = 0; $("status").textContent = STATUS[0];
   statusTimer = setInterval(() => { i = Math.min(i + 1, STATUS.length - 1); $("status").textContent = STATUS[i]; }, 1800);
 }
 function stopStatus() { clearInterval(statusTimer); $("status").textContent = ""; }
 
-/* ---------- render ---------- */
+/* ---------- render results ---------- */
 function render(r) {
   const v = r.verdict || {}, s = r.safety || {}, d = r.diagnosis || {};
   const level = (s.level || "none").toLowerCase();
@@ -334,17 +327,6 @@ function render(r) {
     ...(r.tools_needed || []).map(t => ({ ...asItem(t), kind: "tool" })),
   ].filter(i => i.name);
   const shopTotal = shopItems.reduce((t, i) => t + (num(i.approx_cost_usd) || 0), 0);
-
-  const res = r.resources || {};
-  const fault = String(d.likely_fault || "").split(/[.:;,]/)[0];
-  
-  // Video handling from Gemma backend
-  const vid = r.video || {};
-  const videoQ = vid.youtube_query || res.video_query || `how to fix ${r.item || ""} ${fault}`;
-  const videoEmbedUrl = vid.youtube_embed_url;
-  const videoSearchUrl = vid.youtube_search_url || LINKS.youtube(videoQ);
-  const guideQ = res.guide_query || `${r.item || ""} repair`;
-
   const steps = r.steps || [];
 
   $("out").innerHTML = `
@@ -391,30 +373,36 @@ function render(r) {
       <p class="muted" style="margin:8px 0 0">${esc(v.reasoning)}</p>
     </section>
 
-    <!-- 📹 Live Video Walkthrough Card -->
-    <section class="card reveal">
+    <!-- 🎬 AI Repair Simulation Card (Gemma Directed) -->
+    <section class="card reveal" id="simulationSection">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3 style="margin:0">📹 Video walkthrough</h3>
-        <a href="${videoSearchUrl}" target="_blank" rel="noopener" class="badge" style="text-decoration:none;color:var(--accent)">
-          Open on YouTube ↗
-        </a>
+        <h3 style="margin:0">🎬 AI Repair Simulation</h3>
+        <span class="badge" style="border-color:var(--accent);color:var(--accent)">Gemma Directed</span>
       </div>
+      
+      <p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.4">
+        ${esc(r.simulation_prompt || "Time-lapse simulation showing this exact item being clamped, glued, and restored.")}
+      </p>
 
-      ${videoEmbedUrl ? `
-      <div class="video-player">
-        <iframe 
-          src="${videoEmbedUrl}" 
-          title="Repair video walkthrough"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          allowfullscreen>
-        </iframe>
-      </div>` : `
-      <a class="link" style="margin-top:10px" href="${videoSearchUrl}" target="_blank" rel="noopener">
-        <span class="li">▶️</span>
-        <span><b>Watch Tutorial on YouTube</b><small>Search: “${esc(videoQ)}”</small></span>
-      </a>`}
+      <div class="video-player" id="simPlayerBox">
+        <!-- Ready / CTA state -->
+        <div id="simCta" style="text-align:center;padding:24px;">
+          <button type="button" class="go" id="btnGenSim" style="margin:0;padding:12px 22px;font-size:15px;width:auto;">
+            ✨ Generate AI Repair Video
+          </button>
+          <div class="muted" style="font-size:12px;margin-top:8px">Simulates reassembling and curing the broken parts</div>
+        </div>
 
-      <div class="muted" style="font-size:12px;margin-top:8px">Tutorial for: “${esc(videoQ)}”</div>
+        <!-- Generating / Loading state -->
+        <div id="simLoading" style="display:none;text-align:center;padding:24px;">
+          <div style="font-size:32px;animation:spin 1.5s linear infinite;display:inline-block">⚙️</div>
+          <div style="font-weight:600;margin-top:8px">Synthesizing AI Video…</div>
+          <div class="muted" style="font-size:12px">Rendering frames of the repair transformation (~20s)</div>
+        </div>
+
+        <!-- Active native video player -->
+        <video id="simVideo" controls autoplay loop muted playsinline></video>
+      </div>
     </section>
 
     ${steps.length ? `
@@ -447,15 +435,6 @@ function render(r) {
       ${shopTotal ? `<div class="total">Est. total if you buy everything: <b>${money(shopTotal)}</b> <span>(you may already own the tools)</span></div>` : ""}
     </section>` : ""}
 
-    <section class="card reveal">
-      <h3>📚 Learn how</h3>
-      <div class="links">
-        <a class="link" href="${videoSearchUrl}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
-        <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">🔧</span><span><b>Repair guides</b><small>iFixit</small></span></a>
-        <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">🔎</span><span><b>More help</b><small>Google</small></span></a>
-      </div>
-    </section>
-
     ${r.questions?.length ? `
     <section class="card reveal">
       <h3>🤔 To be more sure, tell us</h3>
@@ -466,10 +445,11 @@ function render(r) {
     <button class="again reveal" id="again">📷 Fix something else</button>
   `;
 
-  // Stagger card entrance animations & animate cost bars
+  // Stagger reveal animations + cost fill animation
   document.querySelectorAll("#out .reveal").forEach((el, i) => el.style.animationDelay = `${i * 70}ms`);
   requestAnimationFrame(() => setTimeout(() => document.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%"), 250));
 
+  // Step checking interaction
   const stepEls = [...document.querySelectorAll(".step")];
   stepEls.forEach(el => el.addEventListener("click", () => {
     el.classList.toggle("done");
@@ -478,6 +458,38 @@ function render(r) {
     $("progText").textContent = n === stepEls.length ? "Fixed! 🎉" : `${n} / ${stepEls.length}`;
   }));
 
+  // Hook up AI Simulation Video Generation trigger
+  const btnGenSim = $("btnGenSim");
+  if (btnGenSim) {
+    btnGenSim.addEventListener("click", async () => {
+      $("simCta").style.display = "none";
+      $("simLoading").style.display = "block";
+
+      try {
+        const simFd = new FormData();
+        simFd.append("prompt", r.simulation_prompt || `Repairing and fixing the ${r.item || "broken object"}`);
+        
+        const res = await fetch("/api/generate-simulation", { method: "POST", body: simFd });
+        const data = await res.json();
+        
+        if (data.video_url) {
+          $("simLoading").style.display = "none";
+          const vid = $("simVideo");
+          vid.src = data.video_url;
+          vid.style.display = "block";
+          vid.play().catch(() => {});
+        } else {
+          throw new Error(data.error || data.message || "Could not generate video simulation");
+        }
+      } catch (err) {
+        $("simLoading").style.display = "none";
+        $("simCta").style.display = "block";
+        showError("Simulation warning: " + err.message);
+      }
+    });
+  }
+
+  // Reset button
   $("again").addEventListener("click", () => {
     $("out").innerHTML = ""; $("desc").value = ""; file = null; $("file").value = "";
     $("drop").classList.remove("has-img");
@@ -487,7 +499,7 @@ function render(r) {
   $("out").scrollIntoView({ behavior: "smooth" });
 }
 
-/* ---------- submit ---------- */
+/* ---------- submit diagnosis ---------- */
 $("go").addEventListener("click", async () => {
   hideError();
   if (!file) { showError("Add a photo first: tap the box above."); return; }

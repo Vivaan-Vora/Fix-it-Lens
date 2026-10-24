@@ -341,7 +341,8 @@ function render(r) {
   // Video handling from Gemma backend
   const vid = r.video || {};
   const videoQ = vid.youtube_query || res.video_query || `how to fix ${r.item || ""} ${fault}`;
-  const videoEmbedUrl = vid.youtube_embed_url || `https://www.youtube.com/embed?listType=search&list=${q(videoQ)}`;
+  const videoEmbedUrl = vid.youtube_embed_url;
+  const videoSearchUrl = vid.youtube_search_url || LINKS.youtube(videoQ);
   const guideQ = res.guide_query || `${r.item || ""} repair`;
 
   const steps = r.steps || [];
@@ -394,8 +395,12 @@ function render(r) {
     <section class="card reveal">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h3 style="margin:0">📹 Video walkthrough</h3>
-        <span class="badge" style="padding:3px 8px;font-size:11px">Auto-matched</span>
+        <a href="${videoSearchUrl}" target="_blank" rel="noopener" class="badge" style="text-decoration:none;color:var(--accent)">
+          Open on YouTube ↗
+        </a>
       </div>
+
+      ${videoEmbedUrl ? `
       <div class="video-player">
         <iframe 
           src="${videoEmbedUrl}" 
@@ -403,7 +408,12 @@ function render(r) {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
           allowfullscreen>
         </iframe>
-      </div>
+      </div>` : `
+      <a class="link" style="margin-top:10px" href="${videoSearchUrl}" target="_blank" rel="noopener">
+        <span class="li">▶️</span>
+        <span><b>Watch Tutorial on YouTube</b><small>Search: “${esc(videoQ)}”</small></span>
+      </a>`}
+
       <div class="muted" style="font-size:12px;margin-top:8px">Tutorial for: “${esc(videoQ)}”</div>
     </section>
 
@@ -440,7 +450,7 @@ function render(r) {
     <section class="card reveal">
       <h3>📚 Learn how</h3>
       <div class="links">
-        <a class="link" href="${vid.youtube_search_url || LINKS.youtube(videoQ)}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
+        <a class="link" href="${videoSearchUrl}" target="_blank" rel="noopener"><span class="li">▶️</span><span><b>Video tutorials</b><small>YouTube</small></span></a>
         <a class="link" href="${LINKS.ifixit(guideQ)}" target="_blank" rel="noopener"><span class="li">🔧</span><span><b>Repair guides</b><small>iFixit</small></span></a>
         <a class="link" href="${LINKS.google(guideQ)}" target="_blank" rel="noopener"><span class="li">🔎</span><span><b>More help</b><small>Google</small></span></a>
       </div>

@@ -2,6 +2,7 @@ import json
 import os
 import re
 import urllib.parse
+import urllib.request
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, UploadFile
@@ -109,11 +110,14 @@ async def diagnose(image: UploadFile = File(...), description: str = Form("")):
 
         result = extract_json(response.text)
 
-        # 2. Defensive check: make sure result is a dict
+        # 1. Defensive check: make sure result is a dict
         if not isinstance(result, dict):
-            return JSONResponse({"error": "Gemma did not return a valid JSON object."}, status_code=500)
+            return JSONResponse(
+                {"error": "Gemma did not return a valid JSON object."},
+                status_code=500,
+            )
 
-        # 3. Defensive check: ensure 'video' is a dict, not a list of strings
+        # 2. Defensive check: ensure 'video' is a dict, not a list of strings
         video_data = result.get("video")
         if not isinstance(video_data, dict):
             fallback_query = (
@@ -126,17 +130,30 @@ async def diagnose(image: UploadFile = File(...), description: str = Form("")):
                 "youtube_query": fallback_query,
             }
 
-        query = result["video"].get("youtube_query") or f"how to repair {result.get('item', 'broken item')}"
-        encoded_query = urllib.parse.quote_plus(str(query))
+        # 3. Retrieve targeted query and resolve a REAL video ID for the embed
+        query = (
+            result["video"].get("youtube_query")
+            or f"how to repair {result.get('item', 'broken item')}"
+        )
+        video_id = fetch_top_youtube_id(query)
 
-        result["video"]["youtube_embed_url"] = f"https://www.youtube.com/embed?listType=search&list={encoded_query}"
-        result["video"]["youtube_search_url"] = f"https://www.youtube.com/results?search_query={encoded_query}"
+        encoded_query = urllib.parse.quote_plus(str(query))
+        result["video"]["youtube_search_url"] = (
+            f"https://www.youtube.com/results?search_query={encoded_query}"
+        )
+
+        if video_id:
+            result["video"]["video_id"] = video_id
+            result["video"]["youtube_embed_url"] = (
+                f"https://www.youtube.com/embed/{video_id}"
+            )
+        else:
+            result["video"]["youtube_embed_url"] = None
 
         return result
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-
-
+        
 @app.post("/api/generate-video")
 async def generate_video(prompt: str = Form(...), image: UploadFile = File(None)):
     """
@@ -165,6 +182,26 @@ async def generate_video(prompt: str = Form(...), image: UploadFile = File(None)
         return {"video_url": output}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+def fetch_top_youtube_id(query: str) -> str | None:
+    """Finds the first real YouTube video ID for a query without needing an API key."""
+    try:
+        url = f"https://www.youtube.com/results?search_query={urllib.parse.quote_plus(query)}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+            # Matches valid 11-character YouTube video IDs from search results
+            matches = re.findall(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
+            if matches:
+                return matches[0]
+    except Exception as err:
+        print(f"YouTube ID lookup warning: {err}")
+    return None
 
 
 @app.get("/")
